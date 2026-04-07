@@ -1,14 +1,23 @@
 import { getGeminiClient, EMBEDDING_MODEL } from './client'
 
 /**
- * Gera embedding vetorial para um texto usando text-embedding-004.
- * Retorna vetor de 768 dimensões.
+ * Gera embedding vetorial para um texto usando gemini-embedding-001.
+ * Usa outputDimensionality=768 para manter compatibilidade com o schema do banco.
+ * @param taskType 'RETRIEVAL_DOCUMENT' para indexar, 'RETRIEVAL_QUERY' para buscar
  */
-export async function embedText(text: string): Promise<number[]> {
+export async function embedText(
+  text: string,
+  taskType: 'RETRIEVAL_DOCUMENT' | 'RETRIEVAL_QUERY' = 'RETRIEVAL_DOCUMENT'
+): Promise<number[]> {
   const client = getGeminiClient()
   const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
 
-  const result = await model.embedContent(text)
+  // outputDimensionality não está na tipagem do SDK v0.24.x mas é suportado pela API
+  const result = await model.embedContent({
+    content: { role: 'user', parts: [{ text }] },
+    taskType: taskType,
+    outputDimensionality: 768,
+  } as never)
   return result.embedding.values
 }
 

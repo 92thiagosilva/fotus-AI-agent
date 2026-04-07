@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
@@ -67,13 +68,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Erro ao salvar metadados: ${dbError.message}` }, { status: 500 })
   }
 
-  // Dispara ingestão em background (não awaita para responder imediatamente)
-  const ingestUrl = new URL('/api/ingest', request.url)
-  fetch(ingestUrl.toString(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-service-token': process.env.SUPABASE_SERVICE_ROLE_KEY! },
-    body: JSON.stringify({ documentId: doc.id }),
-  }).catch(console.error)
+  // Dispara ingestão após a resposta ser enviada (after garante execução no Vercel)
+  const ingestUrl = new URL('/api/ingest', request.url).toString()
+  const serviceToken = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const docId = doc.id
+  after(async () => {
+    try {
+      await fetch(ingestUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-service-token': serviceToken },
+        body: JSON.stringify({ documentId: docId }),
+      })
+    } catch (err) {
+      console.error('Erro ao chamar /api/ingest:', err)
+    }
+  })
 
   return NextResponse.json({ documentId: doc.id, status: 'processing' })
 }

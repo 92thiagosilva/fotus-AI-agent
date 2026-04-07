@@ -28,8 +28,8 @@ export async function retrieveRelevantChunks(
 
   const supabase = createServiceClient()
 
-  // Gera embedding da query
-  const queryEmbedding = await embedText(query)
+  // Gera embedding da query (task type específico para busca)
+  const queryEmbedding = await embedText(query, 'RETRIEVAL_QUERY')
 
   // Chama função pgvector no Supabase
   const { data, error } = await supabase.rpc('match_document_chunks', {

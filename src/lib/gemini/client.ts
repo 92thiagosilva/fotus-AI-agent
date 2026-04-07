@@ -11,5 +11,5 @@ export function getGeminiClient(): GoogleGenerativeAI {
   return genAI
 }
 
-export const GEMINI_MODEL = 'gemini-1.5-pro'
-export const EMBEDDING_MODEL = 'text-embedding-004'
+export const GEMINI_MODEL = 'gemini-2.5-flash'
+export const EMBEDDING_MODEL = 'gemini-embedding-001'
