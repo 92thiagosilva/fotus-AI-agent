@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { ingestDocument } from '@/lib/rag/ingest'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
 
@@ -69,18 +70,14 @@ export async function POST(request: NextRequest) {
   }
 
   // Dispara ingestão após a resposta ser enviada (after garante execução no Vercel)
-  const ingestUrl = new URL('/api/ingest', request.url).toString()
-  const serviceToken = process.env.SUPABASE_SERVICE_ROLE_KEY!
   const docId = doc.id
   after(async () => {
     try {
-      await fetch(ingestUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-service-token': serviceToken },
-        body: JSON.stringify({ documentId: docId }),
-      })
+      console.log('[upload] Iniciando ingestão do documento:', docId)
+      const chunks = await ingestDocument(docId)
+      console.log('[upload] Ingestão concluída:', docId, '— chunks:', chunks)
     } catch (err) {
-      console.error('Erro ao chamar /api/ingest:', err)
+      console.error('[upload] Erro na ingestão:', docId, err)
     }
   })
 

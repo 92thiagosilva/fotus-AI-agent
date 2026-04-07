@@ -46,7 +46,9 @@ function formatBytes(bytes: number) {
 
 export function DocumentList() {
   const { data: documents, mutate, isLoading } = useSWR<Document[]>('/api/documents', fetcher, {
-    refreshInterval: 5000, // re-verifica a cada 5s para atualizar status
+    // Polling só quando há documentos em processamento; para quando tudo está pronto
+    refreshInterval: (data) =>
+      Array.isArray(data) && data.some((d) => d.status === 'processing') ? 4000 : 0,
   })
   const [deleting, setDeleting] = useState<string | null>(null)
 
