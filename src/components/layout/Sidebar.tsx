@@ -102,7 +102,9 @@ export function Sidebar() {
                       {conv.title ?? 'Nova conversa'}
                     </span>
                     <span className="text-xs text-slate-600 group-hover:hidden shrink-0">
-                      {formatDistanceToNow(new Date(conv.updatedAt), { locale: ptBR, addSuffix: false })}
+                      {conv.updatedAt
+                        ? formatDistanceToNow(new Date(conv.updatedAt), { locale: ptBR, addSuffix: false })
+                        : ''}
                     </span>
                     <button
                       onClick={(e) => handleDelete(e, conv.id)}
