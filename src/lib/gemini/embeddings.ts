@@ -32,7 +32,7 @@ export async function embedTextBatch(
 
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize)
-    const results = await Promise.all(batch.map(embedText))
+    const results = await Promise.all(batch.map((text) => embedText(text)))
     embeddings.push(...results)
 
     // Pausa entre lotes para respeitar rate limits
