@@ -17,22 +17,43 @@ export function DocumentUploader({ onUploaded }: { onUploaded?: () => void }) {
   async function uploadFile(file: File) {
     setResults((prev) => [...prev, { name: file.name, status: 'uploading' }])
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     const update = (status: UploadResult['status'], error?: string) =>
       setResults((prev) =>
         prev.map((r) => (r.name === file.name ? { ...r, status, error } : r))
       )
 
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
-      const data = await res.json()
+      // Etapa 1: solicita signed URL ao servidor (envia apenas metadados, sem o arquivo)
+      const metaRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, size: file.size, mimeType: file.type }),
+      })
+      const metaData = await metaRes.json()
 
-      if (!res.ok) {
-        update('error', data.error)
+      if (!metaRes.ok) {
+        update('error', metaData.error ?? 'Erro ao iniciar upload')
         return
       }
+
+      // Etapa 2: upload direto do browser → Supabase Storage (não passa pelo Vercel)
+      const uploadRes = await fetch(metaData.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+
+      if (!uploadRes.ok) {
+        update('error', 'Falha no upload do arquivo')
+        return
+      }
+
+      // Etapa 3: notifica o servidor para iniciar a ingestão
+      await fetch('/api/upload/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: metaData.documentId }),
+      })
 
       update('processing')
 
@@ -40,7 +61,7 @@ export function DocumentUploader({ onUploaded }: { onUploaded?: () => void }) {
       let attempts = 0
       while (attempts < 60) {
         await new Promise((r) => setTimeout(r, 3000))
-        const statusRes = await fetch(`/api/documents/${data.documentId}`)
+        const statusRes = await fetch(`/api/documents/${metaData.documentId}`)
         const statusData = await statusRes.json()
 
         if (statusData.status === 'ready') {
